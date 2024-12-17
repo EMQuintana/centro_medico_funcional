@@ -1,5 +1,6 @@
 from django import forms
 from datetime import datetime
+from django.utils.timezone import now
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from .models import Medico, Recepcionista, FichaMedica, Reserva, Disponibilidad, Especialidad, Paciente
@@ -164,8 +165,8 @@ class ReservaForm(forms.ModelForm):
         model = Reserva
         fields = ['fecha_reserva', 'motivo', 'especialidad', 'medico']
 
-    def init(self, args, **kwargs):
-        super().init(args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         if 'especialidad' in self.data:
             try:
@@ -198,6 +199,10 @@ class ReservaForm(forms.ModelForm):
         if commit:
             reserva.save()
         return reserva
+
+
+
+
 
 
 

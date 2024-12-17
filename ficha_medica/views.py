@@ -10,7 +10,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse
-
+import re
 from ficha_medica.utils import role_required
 from ficha_medica.forms import (
     FichaMedicaForm, DisponibilidadForm, ReservaForm,
@@ -28,7 +28,6 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 import json
 import logging
-import re
 
 # Configuración de logging
 logger = logging.getLogger(__name__)
