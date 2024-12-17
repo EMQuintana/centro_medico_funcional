@@ -28,6 +28,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 import json
 import logging
+import re
 
 # Configuración de logging
 logger = logging.getLogger(__name__)

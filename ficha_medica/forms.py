@@ -164,8 +164,9 @@ class ReservaForm(forms.ModelForm):
         model = Reserva
         fields = ['fecha_reserva', 'motivo', 'especialidad', 'medico']
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def init(self, args, **kwargs):
+        super().init(args, **kwargs)
+
         if 'especialidad' in self.data:
             try:
                 especialidad_id = int(self.data.get('especialidad'))
@@ -173,22 +174,30 @@ class ReservaForm(forms.ModelForm):
             except (ValueError, TypeError):
                 pass
 
+        if 'medico' in self.data:
+            try:
+                medico_id = int(self.data.get('medico'))
+                self.fields['fecha_reserva'].queryset = Disponibilidad.objects.filter(
+                    medico_id=medico_id, ocupada=False, fecha_disponible__gte=now()
+                )
+            except (ValueError, TypeError):
+                pass
+
     def clean_rut_paciente(self):
+        """Valida el RUT y retorna la instancia del Paciente."""
         rut = self.cleaned_data['rut_paciente']
         try:
-            return Paciente.objects.get(rut=rut)
+            paciente = Paciente.objects.get(rut=rut)  # Buscar la instancia del paciente
+            return paciente
         except Paciente.DoesNotExist:
             raise ValidationError("No se encontró un paciente con este RUT.")
 
     def save(self, commit=True):
-        try:
-            reserva = super().save(commit=False)
-            reserva.paciente = self.cleaned_data['rut_paciente']
-            if commit:
-                reserva.save()
-            return reserva
-        except IntegrityError:
-            raise ValidationError("Error al guardar la reserva. Verifique los datos ingresados.")
+        reserva = super().save(commit=False)
+        reserva.paciente = self.cleaned_data['rut_paciente']  # Asigna la instancia del Paciente
+        if commit:
+            reserva.save()
+        return reserva
 
 
 
