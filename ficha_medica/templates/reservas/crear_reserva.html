@@ -214,11 +214,23 @@ fetch(`/api/disponibilidades/?medico_id=${medicoId}`)
     .then(data => {
         const fechaReservaSelect = document.getElementById('fecha_reserva');
         fechaReservaSelect.innerHTML = '<option value="">Seleccione una hora disponible</option>';
+        
+        const ahora = new Date();  // Fecha y hora actual
+        
         data.forEach(disponibilidad => {
-            const horaLocal = ajustarHoraUTCaLocal(disponibilidad.fecha_hora);
-            fechaReservaSelect.innerHTML += `<option value="${disponibilidad.id}">${horaLocal}</option>`;
+            const horaUTC = new Date(disponibilidad.fecha_hora);  // Convertimos a objeto Date
+            const horaLocal = ajustarHoraUTCaLocal(horaUTC);  // Convierte a hora local
+            
+            if (horaUTC > ahora) {  // Verifica si la hora es futura
+                fechaReservaSelect.innerHTML += `<option value="${disponibilidad.id}">${horaLocal}</option>`;
+            }
         });
+    })
+    .catch(error => {
+        console.error('Error al cargar las horas disponibles:', error);
+        alert('Hubo un problema al cargar las horas disponibles. Inténtelo nuevamente.');
     });
+
 
 
 </script>
