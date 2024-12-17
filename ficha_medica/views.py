@@ -84,7 +84,7 @@ def crear_recepcionista(request):
         if form.is_valid():
             form.save()
             messages.success(request, "El recepcionista ha sido creado exitosamente.")
-            return redirect('admin_dashboard')  # Cambia esta redirección según corresponda
+            return redirect('listar_recepcionistas')  # Cambia esta redirección según corresponda
         else:
             messages.error(request, "Hubo un error al crear el recepcionista.")
     else:
@@ -589,7 +589,8 @@ def crear_paciente(request):
         form = PacienteForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('recepcionista_dashboard')  # Ajusta según el nombre de tu URL de panel
+            messages.success(request, "Los datos del paciente se han registrado exitosamente.")
+            return redirect('listar_pacientes')  # Ajusta según el nombre de tu URL de panel
     else:
         form = PacienteForm()
 
