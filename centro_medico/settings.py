@@ -81,27 +81,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'centro_medico.wsgi.application'
 
 
-# ---------------------------
-# Base de datos: SQLite local por defecto; Postgres si existe DATABASE_URL
-# ---------------------------
-DATABASE_URL = os.environ.get("DATABASE_URL")
+# Database
+# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-if DATABASE_URL:
-    # Para entornos como Render: usa la URL de la variable de entorno
-    DATABASES = {
-        "default": dj_database_url.config(default=DATABASE_URL, conn_max_age=600)
-    }
-else:
-    # Desarrollo local: SQLite (archivo único db.sqlite3 en BASE_DIR)
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
-# ---------------------------
-
-
+DATABASES = {
+    'default': dj_database_url.config(
+        default='postgresql://postgres:asd123@localhost:5432/centro_medico',
+        conn_max_age=600
+    )
+}
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
