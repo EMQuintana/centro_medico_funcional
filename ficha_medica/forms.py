@@ -3,23 +3,18 @@ from datetime import datetime
 from django.utils.timezone import now
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError  # <--- FALTABA ESTA IMPORTACIÓN
 from .models import Medico, Recepcionista, FichaMedica, Reserva, Disponibilidad, Especialidad, Paciente
 import re
 
 
-# Función para validar el RUT
+# Función para validar el RUT (Utilitario)
 def validar_rut(rut):
     """
     Valida que el RUT esté en el formato correcto (12345678-9).
     """
     if not re.match(r'^\d{7,8}-\d{1}$', rut):
         raise ValidationError("El RUT debe estar en el formato 12345678-9.")
-    return rut
-
-def clean_rut(self):
-    rut = self.cleaned_data.get('rut')
-    if Paciente.objects.filter(rut=rut).exists():
-        raise ValidationError("El RUT ingresado ya está registrado.")
     return rut
 
 
@@ -58,7 +53,7 @@ class MedicoForm(forms.ModelForm):
                 username=self.cleaned_data['username'],
                 first_name=self.cleaned_data['first_name'],
                 last_name=self.cleaned_data['last_name'],
-                password=self.cleaned_data['password'] or "default_password123"  # Asignar contraseña predeterminada si está vacía
+                password=self.cleaned_data['password'] or "default_password123"
             )
             medico.user = user
         else:
@@ -74,7 +69,6 @@ class MedicoForm(forms.ModelForm):
         if commit:
             medico.save()
         return medico
-
 
 
 class RecepcionistaForm(forms.ModelForm):
@@ -110,7 +104,6 @@ class RecepcionistaForm(forms.ModelForm):
             raise ValidationError("Error al guardar el recepcionista: el RUT ya existe en la base de datos.")
 
 
-
 class FichaMedicaForm(forms.ModelForm):
     class Meta:
         model = FichaMedica
@@ -119,23 +112,31 @@ class FichaMedicaForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['diagnostico'].widget.attrs.update({
-            'placeholder': "Escribe el diagnóstico aquí"
+            'placeholder': "Escribe el diagnóstico aquí",
+            'class': 'form-control',
+            'rows': 3
         })
         self.fields['tratamiento'].widget.attrs.update({
-            'placeholder': "Escribe el tratamiento aquí"
+            'placeholder': "Escribe el tratamiento aquí",
+            'class': 'form-control',
+            'rows': 3
         })
         self.fields['observaciones'].widget.attrs.update({
-            'placeholder': "Añade observaciones aquí (opcional)"
+            'placeholder': "Añade observaciones aquí (opcional)",
+            'class': 'form-control',
+            'rows': 2
         })
+
     def save(self, commit=True):
         try:
             return super().save(commit=commit)
         except IntegrityError:
             raise ValidationError("Error al guardar la ficha médica. Verifique los datos ingresados.")
 
+
 class DisponibilidadForm(forms.ModelForm):
-    fecha = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), label="Fecha")
-    hora = forms.TimeField(widget=forms.TimeInput(attrs={'type': 'time'}), label="Hora")
+    fecha = forms.DateField(widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}), label="Fecha")
+    hora = forms.TimeField(widget=forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}), label="Hora")
 
     class Meta:
         model = Disponibilidad
@@ -154,12 +155,31 @@ class DisponibilidadForm(forms.ModelForm):
             raise ValidationError("Error al guardar la disponibilidad. Verifique los datos.")
 
 
-
 class ReservaForm(forms.ModelForm):
-    especialidad = forms.ModelChoiceField(queryset=Especialidad.objects.all(), label="Especialidad")
-    medico = forms.ModelChoiceField(queryset=Medico.objects.none(), label="Médico")
-    fecha_reserva = forms.ModelChoiceField(queryset=Disponibilidad.objects.none(), label="Horas Disponibles")
-    rut_paciente = forms.CharField(label="RUT del Paciente", validators=[validar_rut])
+    especialidad = forms.ModelChoiceField(
+        queryset=Especialidad.objects.all(), 
+        label="Especialidad",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'especialidad'})
+    )
+    medico = forms.ModelChoiceField(
+        queryset=Medico.objects.none(), 
+        label="Médico",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'medico'})
+    )
+    fecha_reserva = forms.ModelChoiceField(
+        queryset=Disponibilidad.objects.none(), 
+        label="Horas Disponibles",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'fecha_reserva'})
+    )
+    rut_paciente = forms.CharField(
+        label="RUT del Paciente", 
+        validators=[validar_rut],
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    motivo = forms.CharField(
+        label="Motivo",
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2})
+    )
 
     class Meta:
         model = Reserva
@@ -188,7 +208,7 @@ class ReservaForm(forms.ModelForm):
         """Valida el RUT y retorna la instancia del Paciente."""
         rut = self.cleaned_data['rut_paciente']
         try:
-            paciente = Paciente.objects.get(rut=rut)  # Buscar la instancia del paciente
+            paciente = Paciente.objects.get(rut=rut)
             return paciente
         except Paciente.DoesNotExist:
             raise ValidationError("No se encontró un paciente con este RUT.")
@@ -201,25 +221,35 @@ class ReservaForm(forms.ModelForm):
         return reserva
 
 
-
-
-
-
-
-
-import re
-
 class PacienteForm(forms.ModelForm):
-    rut = forms.CharField(label="RUT", validators=[validar_rut])
-    nombre = forms.CharField(label="Nombre completo")
-    fecha_nacimiento = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), label="Fecha de Nacimiento")
-    direccion = forms.CharField(widget=forms.Textarea(attrs={'rows': 2}), required=False)
+    rut = forms.CharField(
+        label="RUT", 
+        validators=[validar_rut],
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    nombre = forms.CharField(
+        label="Nombre completo",
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    fecha_nacimiento = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}), 
+        label="Fecha de Nacimiento"
+    )
+    direccion = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}), 
+        required=False
+    )
     telefono = forms.CharField(
         label="Teléfono", 
         required=False, 
-        help_text="Ingrese solo números sin espacios ni guiones."
+        help_text="Ingrese solo números sin espacios ni guiones.",
+        widget=forms.TextInput(attrs={'class': 'form-control'})
     )
-    email = forms.EmailField(label="Correo electrónico", required=False)
+    email = forms.EmailField(
+        label="Correo electrónico", 
+        required=False,
+        widget=forms.EmailInput(attrs={'class': 'form-control'})
+    )
 
     class Meta:
         model = Paciente
@@ -227,8 +257,14 @@ class PacienteForm(forms.ModelForm):
 
     def clean_rut(self):
         rut = self.cleaned_data['rut']
-        if Paciente.objects.filter(rut=rut).exists():
-            raise ValidationError("El RUT ya está registrado.")
+        if self.instance.pk:
+            # Si estamos editando un paciente existente, excluimos su propio ID del chequeo
+            if Paciente.objects.filter(rut=rut).exclude(pk=self.instance.pk).exists():
+                raise ValidationError("El RUT ya está registrado.")
+        else:
+            # Si es nuevo
+            if Paciente.objects.filter(rut=rut).exists():
+                raise ValidationError("El RUT ya está registrado.")
         return rut
 
     def clean_telefono(self):
@@ -243,3 +279,30 @@ class PacienteForm(forms.ModelForm):
         except IntegrityError:
             raise ValidationError("Error al guardar el paciente. Verifique los datos.")
 
+
+# --- CORRECCIÓN CLAVE: ActivarCuentaForm ahora hereda de forms.Form ---
+class ActivarCuentaForm(forms.Form):
+    rut = forms.CharField(
+        label="Tu RUT", 
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '12345678-9'})
+    )
+    email = forms.EmailField(
+        label="Tu Correo Electrónico", 
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'})
+    )
+    password_1 = forms.CharField(
+        label="Nueva Contraseña", 
+        widget=forms.PasswordInput(attrs={'class': 'form-control'})
+    )
+    password_2 = forms.CharField(
+        label="Confirmar Contraseña", 
+        widget=forms.PasswordInput(attrs={'class': 'form-control'})
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get("password_1")
+        p2 = cleaned_data.get("password_2")
+        if p1 and p2 and p1 != p2:
+            raise ValidationError("Las contraseñas no coinciden.")
+        return cleaned_data

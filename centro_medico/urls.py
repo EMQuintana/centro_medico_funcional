@@ -6,7 +6,7 @@ from django.contrib.auth import views as auth_views
 urlpatterns = [
     # Página principal (Inicio de sesión y redirección por rol)
     path('', ficha_medica_views.home, name='home'),
-    path('admin/medicos/', ficha_medica_views.listar_medicos, name='listar_medicos'),
+    path('admin/medicos/', ficha_medica_views.listar_medicos, name='listar_medico'),
     path('admin/medicos/modificar/<int:medico_id>/', ficha_medica_views.modificar_medico, name='modificar_medico'),
     path('admin/medicos/eliminar/<int:medico_id>/', ficha_medica_views.eliminar_medico, name='eliminar_medico'),
 
@@ -41,6 +41,12 @@ urlpatterns = [
     path('reservas/activas/', ficha_medica_views.obtener_reservas_activas, name='obtener_reservas_activas'),
     path('modificar-disponibilidad/', ficha_medica_views.modificar_disponibilidad, name='modificar_disponibilidad'),
     path('ficha/<int:ficha_id>/pdf/', ficha_medica_views.generar_ficha_pdf, name='generar_ficha_pdf'),
+
+    path('mi-portal/', ficha_medica_views.dashboard_paciente, name='dashboard_paciente'),
+    path('mis-fichas/', ficha_medica_views.mis_fichas, name='mis_fichas'),
+    path('mis-recetas/', ficha_medica_views.mis_recetas, name='mis_recetas'),
+    path('cancelar-reserva/<int:reserva_id>/', ficha_medica_views.cancelar_reserva_paciente, name='cancelar_reserva_paciente'),
+    path('crear-clave/', ficha_medica_views.activar_cuenta, name='activar_cuenta'),
 
     # APIs
     path('api/medicos/', ficha_medica_views.api_medicos, name='api_medicos'),

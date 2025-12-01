@@ -5,9 +5,13 @@ from django.utils.timezone import localtime, now
 from django.core.validators import RegexValidator
 
 class Paciente(models.Model):
+    # --- CAMBIO IMPORTANTE: Agregamos la relación con el Usuario ---
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+    # ---------------------------------------------------------------
+    
     rut = models.CharField(max_length=12, unique=True)  # Ejemplo: 12345678-9
     nombre = models.CharField(max_length=100)
-    fecha_nacimiento = models.DateField(blank=True, null=True)  # Campo adicional
+    fecha_nacimiento = models.DateField(blank=True, null=True)
     direccion = models.TextField(blank=True, null=True)
     telefono = models.CharField(
         max_length=15,
@@ -32,15 +36,14 @@ class Paciente(models.Model):
 
     @property
     def edad(self):
-        """Calcula la edad del paciente basado en la fecha de nacimiento."""
         if self.fecha_nacimiento:
             today = date.today()
             return today.year - self.fecha_nacimiento.year - ((today.month, today.day) < (self.fecha_nacimiento.month, self.fecha_nacimiento.day))
         return None
 
 class Especialidad(models.Model):
-    nombre = models.CharField(max_length=100, unique=True)  # Nombre único para la especialidad
-    descripcion = models.TextField(blank=True, null=True)  # Descripción opcional
+    nombre = models.CharField(max_length=100, unique=True)
+    descripcion = models.TextField(blank=True, null=True)
 
     class Meta:
         verbose_name = "Especialidad"
@@ -49,10 +52,9 @@ class Especialidad(models.Model):
     def __str__(self):
         return self.nombre
 
-
 class Medico(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    especialidad = models.ForeignKey(Especialidad, on_delete=models.CASCADE, related_name="medicos")  # Relación con Especialidad
+    especialidad = models.ForeignKey(Especialidad, on_delete=models.CASCADE, related_name="medicos")
     telefono = models.CharField(
         max_length=15,
         blank=True,
@@ -74,7 +76,6 @@ class Medico(models.Model):
         return f"{self.user.first_name} {self.user.last_name} - {self.especialidad.nombre}"
 
     def save(self, *args, **kwargs):
-        # Crear o asignar grupo 'Medico' al usuario
         grupo, created = Group.objects.get_or_create(name='Medico')
         self.user.groups.add(grupo)
         super().save(*args, **kwargs)
@@ -82,6 +83,7 @@ class Medico(models.Model):
 class FichaMedica(models.Model):
     paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='fichas')
     medico = models.ForeignKey(Medico, on_delete=models.SET_NULL, null=True, related_name='fichas')
+    reserva = models.ForeignKey('Reserva', on_delete=models.SET_NULL, null=True, blank=True) # Agregado por seguridad si lo usas en views
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     diagnostico = models.TextField()
     tratamiento = models.TextField(blank=True, null=True)
@@ -92,10 +94,8 @@ class FichaMedica(models.Model):
         verbose_name_plural = "Fichas"
 
     def __str__(self):
-        if self.medico:
-            return f"Ficha de {self.paciente.nombre} - Médico: {self.medico.user.first_name} {self.medico.user.last_name} ({self.fecha_creacion.strftime('%d/%m/%Y')})"
-        else:
-            return f"Ficha de {self.paciente.nombre} - Médico: No asignado ({self.fecha_creacion.strftime('%d/%m/%Y')})"
+        nombre_medico = f"{self.medico.user.first_name} {self.medico.user.last_name}" if self.medico else "No asignado"
+        return f"Ficha de {self.paciente.nombre} - Médico: {nombre_medico} ({self.fecha_creacion.strftime('%d/%m/%Y')})"
 
 class Recepcionista(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -122,7 +122,6 @@ class Recepcionista(models.Model):
         return f"{self.user.first_name} {self.user.last_name} - Recepcionista"
 
     def save(self, *args, **kwargs):
-        # Crear o asignar grupo 'Recepcionista' al usuario
         grupo, created = Group.objects.get_or_create(name='Recepcionista')
         self.user.groups.add(grupo)
         super().save(*args, **kwargs)
@@ -133,7 +132,7 @@ class Disponibilidad(models.Model):
     ocupada = models.BooleanField(default=False)
 
     def fecha_local(self):
-        return localtime(self.fecha_disponible)  # Convierte a la zona horaria local
+        return localtime(self.fecha_disponible)
     
     class Meta:
         verbose_name = "Disponibilidad"
@@ -142,23 +141,21 @@ class Disponibilidad(models.Model):
     def __str__(self):
         return f"{self.medico} - {self.fecha_disponible}"
 
-
-
-
 class Reserva(models.Model):
     paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE)
     especialidad = models.ForeignKey(Especialidad, on_delete=models.CASCADE)
     medico = models.ForeignKey(Medico, on_delete=models.CASCADE)
     fecha_reserva = models.ForeignKey(Disponibilidad, on_delete=models.CASCADE)
     motivo = models.TextField()
-    recepcionista = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)  # Agregar este campo
+    recepcionista = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         verbose_name = "Reserva"
         verbose_name_plural = "Reservas"
 
     def __str__(self):
-        return f"Reserva de {self.paciente.nombre} gestionada por {self.recepcionista.first_name if self.recepcionista else 'N/A'} para el médico {self.medico.user.first_name}"
+        recep = self.recepcionista.first_name if self.recepcionista else 'N/A'
+        return f"Reserva de {self.paciente.nombre} gestionada por {recep}"
 
 class Notificacion(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notificaciones')
@@ -168,5 +165,3 @@ class Notificacion(models.Model):
 
     def __str__(self):
         return f"Notificación para {self.usuario.username} - {self.mensaje}"
-
-

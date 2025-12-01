@@ -22,18 +22,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-
-
 SECRET_KEY = os.environ.get('SECRET_KEY', default='your secret key')
 
-#SECRET_KEY = 'django-insecure-axly%(tw357c842r67aiby8%%2@j9fj7dj2^me-_to=(_z!5ku'
-
 # SECURITY WARNING: don't run with debug turned on in production!
-
 DEBUG = 'RENDER' not in os.environ
-
-
-#DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -89,15 +81,25 @@ TEMPLATES = [
 WSGI_APPLICATION = 'centro_medico.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+# ---------------------------
+# Base de datos: SQLite local por defecto; Postgres si existe DATABASE_URL
+# ---------------------------
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default='postgresql://postgres:postgres@localhost/postgres',
-        conn_max_age=600
-    )
-}
+if DATABASE_URL:
+    # Para entornos como Render: usa la URL de la variable de entorno
+    DATABASES = {
+        "default": dj_database_url.config(default=DATABASE_URL, conn_max_age=600)
+    }
+else:
+    # Desarrollo local: SQLite (archivo único db.sqlite3 en BASE_DIR)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+# ---------------------------
 
 
 # Password validation
@@ -137,8 +139,8 @@ USE_I18N = True
 STATIC_URL = 'static/'
 
 if not DEBUG:
-    STATIC_ROOT=os.path.join(BASE_DIR,'staticfiles')
-    STATICFILES_STORAGE='whitenoise.storage.CompressedManifestStaticFilesStorage'
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
